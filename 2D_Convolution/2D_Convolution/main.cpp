@@ -21,6 +21,7 @@ void MultMatrixScalar(const double scalar, double *h, const int m, const int n)
 }
 
 
+
 int main(const int argc, char *argv[])
 {
 	if (argc != 3)
