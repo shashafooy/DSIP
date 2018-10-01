@@ -13,6 +13,11 @@ class PgmIO
 	// ReSharper restore CppInconsistentNaming
 {
 public:
+	/**
+	 * \brief Attempts to open the given .pgm files and parses the header.
+	 * \param inFile Input .pgm
+	 * \param outFile Output .pgm
+	 */
 	PgmIO(const string& inFile, const string& outFile)
 	{
 		in.open(inFile, ios::in | ios::binary);
@@ -54,7 +59,13 @@ public:
 	} pgm_file_header;
 
 
-	void GetData(double * x, int xOffSet = 0, int yOffSet = 0)
+	/**
+	 * \brief Parse the data of the input file into a vector. Must allocate space for x before hand
+	 * \param x vector to store data into.
+	 * \param xOffSet offset for where to read data into x
+	 * \param yOffSet offset for where to read data into y
+	 */
+	void GetData(double * x, const int xOffSet = 0, const int yOffSet = 0)
 	{
 		string ss;
 		const auto temp = new unsigned char[dataSize];
@@ -70,11 +81,20 @@ public:
 
 	}
 
+	/**
+	 * \brief Gets the header of the input file
+	 * \return header
+	 */
 	pgm_file_header GetHeader() const
 	{
 		return header;
 	}
 
+	/**
+	 * \brief Writes data to output file .pgm
+	 * \param y Data vector to output
+	 * \param yHeader Header to use for .pgm
+	 */
 	void WriteData(double *y, pgm_file_header yHeader)
 	{
 		string dim;
@@ -111,6 +131,9 @@ private:
 	int dataIndex{};
 
 
+	/**
+	 * \brief Parse the .pgm header and stores the data into the header var
+	 */
 	void HeaderParser()
 	{
 		string buffer = ReadLine();
@@ -134,6 +157,12 @@ private:
 	}
 
 
+	/**
+	 * \brief Split the given string into an array of strings
+	 * \param str string to parse
+	 * \param delim delimiter to separate strings
+	 * \return array of strings. max size 10.
+	 */
 	string* Split(const std::string& str, const char delim = ' ') const
 	{
 		auto* cString = new string[10];
@@ -147,6 +176,11 @@ private:
 		return cString;
 	}
 
+	/**
+	 * \brief Read in n bytes (unsigned char)
+	 * \param numBytes number of bytes to read in, default 1
+	 * \return c string with the given byte. Terminated in NULL
+	 */
 	char* ReadByte(const int numBytes = 1)
 	{
 		const auto buffer = new char[numBytes + 1];
@@ -157,17 +191,29 @@ private:
 		return buffer;
 	}
 
-	string ReadLine()
+
+	/**
+	 * \brief Read in the line up until the delimiter
+	 * \param delim delimiter for when to stop looking. Default new line
+	 * \return The parsed line NOT including the delimiter 
+	 */
+	string ReadLine(const char delim = '\n')
 	{
 		string retVal, buffer;
 		do
 		{
 			retVal.append(buffer);
 			buffer.assign(ReadByte());
-		} while (buffer.find('\n'));
+		} while (buffer.find(delim));
 		return retVal;
 	}
 
+	/**
+	 * \brief Normalizes the upper and lower limits of the signal.
+	 * Anything lower than 0 becomes 0. 
+	 * Anything higher than the header maxVal becomes maxVal
+	 * \param p Data to normalize
+	 */
 	void NormalizeBounds(double* p) const
 	{
 		for (auto i = 0; i < dataSize; i++)

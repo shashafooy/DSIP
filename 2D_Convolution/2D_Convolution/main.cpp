@@ -1,9 +1,14 @@
 #include "Convolution.h"
 #include "pgmIO.h"
 
-#pragma warning(disable:4700);
 
-
+/**
+ * \brief Multiplies the given matrix with a scalar
+ * \param scalar 
+ * \param h matrix to multiply
+ * \param m number of rows in matrix
+ * \param n number of column in matrix
+ */
 void MultMatrixScalar(const double scalar, double *h, const int m, const int n)
 {
 	for(auto i=0; i<m; i++)
@@ -26,11 +31,6 @@ int main(const int argc, char *argv[])
 	}
 
 
-#define X(u,v) x[(u)*pgmFile.GetHeader().height+(v)]
-
-
-	Convolution conv {};
-
 	double h[] = {
 		1,2,3,2,1,
 		2,4,6,4,2,
@@ -41,8 +41,8 @@ int main(const int argc, char *argv[])
 	MultMatrixScalar(1 / 81.0f, h, 5, 5);
 
 
-	Convolution::Conv2D(argv[1], argv[2], h, 5, 5);
-	//Convolution::Sobel(argv[1], argv[2]);
+	//Convolution::Conv2D(argv[1], argv[2], h, 5, 5);
+	Convolution::Sobel(argv[1], argv[2]);
 
 
 
