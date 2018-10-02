@@ -28,11 +28,11 @@ public:
 
 		// ReSharper disable CppInconsistentNaming
 		const auto rowX = pgmFile.GetHeader().height,
-			colX = pgmFile.GetHeader().width,
-			rowZ = rowX + 2 * (hM - 1),
-			colZ = colX + 2 * (hN - 1),
-			rowY = rowX + hM - 1,
-			colY = colX + hN - 1;
+		           colX = pgmFile.GetHeader().width,
+		           rowZ = rowX + 2 * (hM - 1),
+		           colZ = colX + 2 * (hN - 1),
+		           rowY = rowX + hM - 1,
+		           colY = colX + hN - 1;
 		// ReSharper restore CppInconsistentNaming
 
 
@@ -51,8 +51,6 @@ public:
 		//Output to file and cleanup
 		pgmFile.WriteData(y, yHeader, hM - 2, hN - 2);
 
-
-		
 		free(y);
 		free(x);
 	}
@@ -76,13 +74,13 @@ public:
 
 		// ReSharper disable CppInconsistentNaming
 		const auto rowX = pgmFile.GetHeader().height,
-			colX = pgmFile.GetHeader().width,
-			rowH = 3,
-			colH = 3,
-			rowY = rowX, // +(rowH - 1),
-			colY = colX, // +colH - 1,
-			rowZ = rowX + 2 * (rowH - 1),
-			colZ = colX + 2 * (colH - 1);
+		           colX = pgmFile.GetHeader().width,
+		           rowH = 3,
+		           colH = 3,
+		           rowY = rowX, // +(rowH - 1),
+		           colY = colX, // +colH - 1,
+		           rowZ = rowX + 2 * (rowH - 1),
+		           colZ = colX + 2 * (colH - 1);
 		// ReSharper restore CppInconsistentNaming
 
 		//Allocate and get data for x
@@ -111,10 +109,10 @@ public:
 			for (auto l = 0; l < colY; l++)
 			{
 				//Y-col
-				for (int i = 0; i < rowH; i++)
+				for (auto i = 0; i < rowH; i++)
 				{
 					//H-row
-					for (int j = 0; j < colH; j++)
+					for (auto j = 0; j < colH; j++)
 					{
 						//H-col
 						tempX += S1(i, j) * X(k + i, l + j);
@@ -141,13 +139,13 @@ public:
 
 		auto yHeader = xPgm.GetHeader();
 		const auto rowX = xPgm.GetHeader().height,
-			colX = xPgm.GetHeader().width,
-			rowH = hPgm.GetHeader().height,
-			colH = hPgm.GetHeader().width,
-			rowZ = rowX + 2 * (rowH - 1),
-			colZ = colX + 2 * (colH - 1),
-			rowY = rowX + (rowH - 1),
-			colY = colX + (colH - 1);
+		           colX = xPgm.GetHeader().width,
+		           rowH = hPgm.GetHeader().height,
+		           colH = hPgm.GetHeader().width,
+		           rowZ = rowX + 2 * (rowH - 1),
+		           colZ = colX + 2 * (colH - 1),
+		           rowY = rowX + (rowH - 1),
+		           colY = colX + (colH - 1);
 
 		yHeader.width = colY;
 		yHeader.height = rowY;
@@ -163,27 +161,27 @@ public:
 		xPgm.GetData(x, rowH - 1, colH - 1);
 		hPgm.GetData(h);
 
-		for (int i = 0; i < rowZ * colZ; i++)
+		for (auto i = 0; i < rowZ * colZ; i++)
 		{
 			x2[i] = pow(x[i], 2);
 		}
-		for (int i = 0; i < rowH * colH; i++)
+		for (auto i = 0; i < rowH * colH; i++)
 		{
 			h2[i] = 1;
 		}
 		Convolve2D(y2, rowY, colY, x2, rowX, colX, h2, rowH, colH);
 		Convolve2D(y1, rowY, colY, x, rowX, colX, h, rowH, colH);
-		for (int i = 0; i < rowY * colY; i++)
+		for (auto i = 0; i < rowY * colY; i++)
 		{
 			y1[i] /= y2[i];
 		}
 		ScaleValues(y1, rowY * colY, 255);
 
-		for (int i = 350; i < 375; i++)
+		for (auto i = 350; i < 375; i++)
 		{
-			for (int j = 25; j < 50; j++)
+			for (auto j = 25; j < 50; j++)
 			{
-				cout << static_cast<int>(floor(y1[i*rowY + j])) << " ";
+				cout << static_cast<int>(floor(y1[i * rowY + j])) << " ";
 			}
 			cout << endl;
 		}
@@ -199,7 +197,7 @@ public:
 
 private:
 	static void Convolve2D(double* y, const int yM, const int yN, const double* x, const int xM, const int xN,
-		const double* h, const int hM, const int hN)
+	                       const double* h, const int hM, const int hN)
 	{
 #define Y(u,v) y[(u)*yN+(v)]
 #define X(u,v) x[(u)*xN+(v)]
@@ -214,10 +212,10 @@ private:
 			for (auto l = 0; l < yN; l++)
 			{
 				//Y-col
-				for (int i = 0; i < hM; i++)
+				for (auto i = 0; i < hM; i++)
 				{
 					//H-row
-					for (int j = 0; j < hN; j++)
+					for (auto j = 0; j < hN; j++)
 					{
 						//H-col
 						result += H(i, j) * X(k + i, l + j);
@@ -232,7 +230,7 @@ private:
 	static void ScaleValues(double* y, const int n, const double maxOut)
 	{
 		const auto maxVal = *max_element(y, y + n);
-		for (int i = 0; i < n; i++)
+		for (auto i = 0; i < n; i++)
 		{
 			y[i] = y[i] / maxVal * maxOut;
 		}

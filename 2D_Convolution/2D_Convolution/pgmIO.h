@@ -94,8 +94,10 @@ public:
 	 * \brief Writes data to output file .pgm
 	 * \param y Data vector to output
 	 * \param yHeader Header to use for .pgm
+	 * \param mOffset y row offset due to H
+	 * \param nOffset y col offset due to H
 	 */
-	void WriteData(double *y, pgm_file_header yHeader, int mOffset = 0, int nOffset = 0)
+	void WriteData(double *y, const pgm_file_header yHeader, const int mOffset = 0, const int nOffset = 0)
 	{
 		string dim;
 		
@@ -114,12 +116,6 @@ public:
 
 		auto* temp = new unsigned char[dataSize];
 
-		/*for (auto i = 0; i < dataSize; i++)
-		{
-			temp[i] = static_cast<int>(floor(y[i]));
-		}*/
-
-
 		for (auto i = 0; i < header.height; i++)
 		{
 			for(auto j=0; j < header.width; j++)
@@ -134,9 +130,6 @@ public:
 
 		out.close();
 		delete[] temp;
-		//free(y);
-
-
 	}
 
 
@@ -153,7 +146,7 @@ private:
 	 */
 	void HeaderParser()
 	{
-		string buffer = ReadLine();
+		auto buffer = ReadLine();
 		if (buffer != "P5")
 		{
 			printf("Invalid file format");
@@ -166,7 +159,7 @@ private:
 
 			if (!buffer.find('#')) header.comments.append(buffer).append("\n");
 		} while (!buffer.find('#'));
-		int size = 0;
+		auto size = 0;
 		header.width = stoi(Split(buffer, size)[0]);
 		if(size>1)	header.height = stoi(Split(buffer, size)[1]);
 		else
