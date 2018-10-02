@@ -18,10 +18,10 @@ public:
 	 * \param inFile Input .pgm
 	 * \param outFile Output .pgm
 	 */
-	PgmIO(const string& inFile, const string& outFile)
+	PgmIO(const string& inFile, const string& outFile = "noFile")
 	{
 		in.open(inFile, ios::in | ios::binary);
-		out.open(outFile, ios::binary | ios::out);
+		if(outFile != "noFile")out.open(outFile, ios::binary | ios::out);
 
 		if (!in.is_open())
 		{
@@ -29,7 +29,7 @@ public:
 			exit(EXIT_FAILURE);
 		}
 
-		if (!out.is_open())
+		if (outFile != "noFile" && !out.is_open())
 		{
 			printf("error opening output file\n");
 			exit(EXIT_FAILURE);
@@ -95,26 +95,43 @@ public:
 	 * \param y Data vector to output
 	 * \param yHeader Header to use for .pgm
 	 */
-	void WriteData(double *y, pgm_file_header yHeader)
+	void WriteData(double *y, pgm_file_header yHeader, int mOffset = 0, int nOffset = 0)
 	{
 		string dim;
 		
-		dim.assign(yHeader.magicNumber).append("\n").append(yHeader.comments).append("\n");		
+		dim.assign(header.magicNumber).append("\n").append(header.comments).append("\n");		
 		out.write(dim.c_str(), dim.length());
-		dim.assign(std::to_string(yHeader.width)).append(" ").append(std::to_string(yHeader.height)).append("\n");
+		dim.assign(std::to_string(header.width)).append(" ").append(std::to_string(header.height)).append("\n");
 		out.write(dim.c_str(), dim.length());
-		dim.assign(std::to_string(yHeader.maxVal)).append("\n");
+		dim.assign(std::to_string(header.maxVal)).append("\n");
 		out.write(dim.c_str(), dim.length());
 
-		NormalizeBounds(y);
+		for (auto i = 0; i < yHeader.width*yHeader.height; i++)
+		{
+			if (y[i] < 0) y[i] = 0;
+			if (y[i] > header.maxVal) y[i] = header.maxVal;
+		}
 
 		auto* temp = new unsigned char[dataSize];
-		for (auto i = 0; i < dataSize; i++)
+
+		/*for (auto i = 0; i < dataSize; i++)
 		{
 			temp[i] = static_cast<int>(floor(y[i]));
+		}*/
+
+
+		for (auto i = 0; i < header.height; i++)
+		{
+			for(auto j=0; j < header.width; j++)
+			{
+				temp[i*header.width+j] = static_cast<int>(floor(y[(i+mOffset)*yHeader.width+j+nOffset]));
+
+			}
 		}
 
 		out.write(reinterpret_cast<char*>(temp), dataSize);
+		
+
 		out.close();
 		delete[] temp;
 		//free(y);
@@ -149,8 +166,13 @@ private:
 
 			if (!buffer.find('#')) header.comments.append(buffer).append("\n");
 		} while (!buffer.find('#'));
-		header.width = stoi(Split(buffer)[0]);
-		header.height = stoi(Split(buffer)[1]);
+		int size = 0;
+		header.width = stoi(Split(buffer, size)[0]);
+		if(size>1)	header.height = stoi(Split(buffer, size)[1]);
+		else
+		{
+			header.height = stoi(ReadLine());
+		}
 		header.maxVal = stoi(ReadLine());
 		dataIndex = in.tellg();
 		dataSize = header.width*header.height;
@@ -160,18 +182,21 @@ private:
 	/**
 	 * \brief Split the given string into an array of strings
 	 * \param str string to parse
+	 * \param size size of the output array
 	 * \param delim delimiter to separate strings
 	 * \return array of strings. max size 10.
 	 */
-	string* Split(const std::string& str, const char delim = ' ') const
+	string* Split(const std::string& str, int &size, const char delim = ' ') const
 	{
 		auto* cString = new string[10];
 		stringstream ss(str);
 		string token;
 		auto i = 0;
+		size = 0;
 		while (getline(ss, token, delim))
 		{
 			cString[i++] = token;
+			size++;
 		}
 		return cString;
 	}

@@ -23,7 +23,7 @@ void MultMatrixScalar(const double scalar, double *h, const int m, const int n)
 
 int main(const int argc, char *argv[])
 {
-	if (argc != 3)
+	if (argc < 3)
 	{
 		printf("Wrong number of arguments");
 		printf("Format: .exe inFile outFile");
@@ -42,8 +42,8 @@ int main(const int argc, char *argv[])
 
 
 	//Convolution::Conv2D(argv[1], argv[2], h, 5, 5);
-	Convolution::Sobel(argv[1], argv[2]);
-
+	//Convolution::Sobel(argv[1], argv[2]);
+	Convolution::Correlate(argv[1], argv[2], argv[3]);
 
 
 	return 0;
