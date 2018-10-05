@@ -77,8 +77,8 @@ public:
 		           colX = pgmFile.GetHeader().width,
 		           rowH = 3,
 		           colH = 3,
-		           rowY = rowX, // +(rowH - 1),
-		           colY = colX, // +colH - 1,
+		           rowY = rowX +(rowH - 1),
+		           colY = colX +colH - 1,
 		           rowZ = rowX + 2 * (rowH - 1),
 		           colZ = colX + 2 * (colH - 1);
 		// ReSharper restore CppInconsistentNaming
@@ -115,6 +115,7 @@ public:
 					for (auto j = 0; j < colH; j++)
 					{
 						//H-col
+						//-(i-k) = k+i
 						tempX += S1(i, j) * X(k + i, l + j);
 						tempY += S2(i, j) * X(k + i, l + j);
 					}
@@ -170,21 +171,27 @@ public:
 			h2[i] = 1;
 		}
 		Convolve2D(y2, rowY, colY, x2, rowX, colX, h2, rowH, colH);
+		for (int i = 50; i < 75; i++)
+		{
+			cout << y2[i] << " ";
+		}
+		cout << endl << endl;
 		Convolve2D(y1, rowY, colY, x, rowX, colX, h, rowH, colH);
+		for (int i = 50; i < 75; i++)
+		{
+			cout << y1[i] << " ";
+		}
+		cout << endl << endl;
 		for (auto i = 0; i < rowY * colY; i++)
 		{
 			y1[i] /= y2[i];
 		}
-		ScaleValues(y1, rowY * colY, 255);
-
-		for (auto i = 350; i < 375; i++)
+		for (int i = 50; i < 75; i++)
 		{
-			for (auto j = 25; j < 50; j++)
-			{
-				cout << static_cast<int>(floor(y1[i * rowY + j])) << " ";
-			}
-			cout << endl;
+			cout << y1[i] << " ";
 		}
+		cout << endl << endl;
+		ScaleValues(y1, rowY * colY, 255);
 
 		xPgm.WriteData(y1, yHeader, hPgm.GetHeader().height - 1, hPgm.GetHeader().width - 1);
 		free(x);

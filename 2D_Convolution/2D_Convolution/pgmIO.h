@@ -39,6 +39,12 @@ public:
 
 	}
 
+	~PgmIO()
+	{
+		in.close();
+		out.close();
+	}
+
 	typedef struct
 	{
 		//2 char number to identify file type, pgm is P5
@@ -71,6 +77,7 @@ public:
 		const auto temp = new unsigned char[dataSize];
 		in.seekg(dataIndex, ios::beg);
 		in.read(reinterpret_cast<char*>(temp), dataSize);
+		//put image into padded x
 		for (auto i = 0; i < header.height; i++)
 		{
 			for (auto j = 0; j < header.width; j++)
@@ -78,7 +85,7 @@ public:
 				x[(i+xOffSet)*header.width + yOffSet+j] = temp[i*header.width+j];
 			}
 		}
-
+		delete[] temp;
 	}
 
 	/**
