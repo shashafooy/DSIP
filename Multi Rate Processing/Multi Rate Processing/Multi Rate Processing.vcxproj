@@ -116,7 +116,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Convolution.h" />
+    <ClInclude Include="dspFileHeader.h" />
+    <ClInclude Include="fileRead.h" />
     <ClInclude Include="pgmIO.h" />
+    <ClInclude Include="PolyPhase Filter.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
