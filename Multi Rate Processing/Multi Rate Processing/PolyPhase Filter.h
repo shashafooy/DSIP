@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "pgmIO.h"
+#include "fileRead.h"
 
 using namespace std;
 
@@ -8,22 +8,51 @@ class PolyPhaseFilter
 {
 public:
 
-	PolyPhaseFilter(const string& inFile, const string& outFile, int M, int L) : file(inFile, outFile)
+	/**
+	 * \brief 
+	 * \param inFile input file containing x[n] data
+	 * \param outFile desired output file for y[n]
+	 * \param M upsampling rate
+	 * \param L downsampling rate
+	 */
+	PolyPhaseFilter(const string& inFile, const string& outFile, int M, int L) : file(inFile, outFile), upRate(L), downRate(M)
 	{
 
-		double y[5] = { 0 };
-		double x[] = {
-			1, 2, 3, 2, 1
-		};
-		//TODO: warm up polyphase filter for M - 1 future values
+	}
 
-
+	/**
+	 * \brief Performs a sampling conversion on x[n] with the rates M,L given in the constructor
+	 */
+	void Filter()
+	{
 		while(!file.eof)
 		{
 			file.WriteValue(Filter(file.GetValue()));
 		}
 	}
 
+	/**
+	 * \brief Performs the PolyPhase implementation of the sampling conversion L/M.
+	 */
+	void PolyFilter()
+	{
+		
+	}
+
+
+private:
+	
+
+	FileRead file;
+	const int static FILTER_SIZE = 192;
+	double xBuff[FILTER_SIZE] = {0};
+	int upRate, downRate;
+
+
+	/**
+	 * \brief Shift the given array right by one and put 0 at x[0]
+	 * \param x array to shift
+	 */
 	void ShiftRight(double *x) const
 	{
 		for (auto i = FILTER_SIZE-1; i > 0; i--)
@@ -33,6 +62,12 @@ public:
 		x[0] = 0.0;
 	}
 
+	/**
+	 * \brief filters the given x value through a FIR filter. 
+	 * This is only the filter, does not up or down sample.
+	 * \param x input x'[n] value
+	 * \return output y'[n] value
+	 */
 	float Filter(float x)
 	{
 		auto y = 0.0;
@@ -47,20 +82,16 @@ public:
 
 		return static_cast<float>(y);
 	}
-
+	/**
+	 * \brief Splits the FIR filter into multiple parts to perform Poly Phase Filtering
+	 * \param x Input x[n] value
+	 * \return 
+	 */
 	float PolyFilter(float x)
 	{
 		//TODO implement polyphase filter
 		return 0;
 	}
-
-
-private:
-
-
-	FileRead file;
-	const int static FILTER_SIZE = 192;
-	double xBuff[FILTER_SIZE] = {0};
 
 	// ReSharper disable once CppInconsistentNaming
 	const double FIRValues[FILTER_SIZE] =
