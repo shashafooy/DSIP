@@ -52,10 +52,22 @@ public:
 	 */
 	void PolyFilter()
 	{
-		//warmup buffer
-		for ()
+		deque<float> yBuffer;
+		//TODO warmup buffer(upRate-1) 
+		auto l=0;
+		while (!file.eof)
 		{
-			y0 = PolyFilter(k, l);
+			//TODO get X, put into xBuffer 
+			for (auto k=0; k<upRate; k++)
+			{
+				yBuffer.push_back(PolyFilter(k,l));
+			}
+			l=(l+1)%downRate;
+			for (auto yVal : yBuffer)
+			{
+				file.WriteValue(yVal);
+			}
+			yBuffer.clear();
 		}
 	}
 
@@ -67,6 +79,7 @@ private:
 	const int static FILTER_SIZE = 192;
 	double xBuff[FILTER_SIZE] = {0};
 	const int upRate, downRate;
+	//TODO create a macro to access xBuff, xBuff needs to be filtersize + (upsample-1)
 
 
 	/**
@@ -110,7 +123,7 @@ private:
 	 */
 	float PolyFilter(int k, int l)
 	{
-		//TODO implement polyphase filter
+		//TODO implement polyphase filter 
 		return 0;
 	}
 
