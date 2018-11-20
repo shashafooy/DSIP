@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <deque>
 #include "fileRead.h"
 
 using namespace std;
@@ -15,19 +16,34 @@ public:
 	 * \param M upsampling rate
 	 * \param L downsampling rate
 	 */
-	PolyPhaseFilter(const string& inFile, const string& outFile, int M, int L) : file(inFile, outFile), upRate(L), downRate(M)
-	{
-
-	}
+	PolyPhaseFilter(const string& inFile, const string& outFile, int L, int M) 
+		: file(inFile, outFile), upRate(L), downRate(M){}
 
 	/**
 	 * \brief Performs a sampling conversion on x[n] with the rates M,L given in the constructor
 	 */
 	void Filter()
 	{
+		deque<float> yBuffer;
 		while(!file.eof)
 		{
-			file.WriteValue(Filter(file.GetValue()));
+			//Upsample
+			yBuffer.push_back(Filter(file.GetValue()));
+			for (auto i = 0; i < upRate - 1; i++)
+			{
+				yBuffer.push_back(Filter(0));
+			}
+
+			//Downsample
+			while (yBuffer.size() >= downRate)
+			{
+				file.WriteValue(yBuffer[0]);
+				yBuffer.erase(yBuffer.begin(), yBuffer.begin() + downRate);
+			}
+		}
+		if (yBuffer.size() > 0)
+		{
+			file.WriteValue(yBuffer[0]);
 		}
 	}
 
@@ -36,7 +52,11 @@ public:
 	 */
 	void PolyFilter()
 	{
-		
+		//warmup buffer
+		for ()
+		{
+			y0 = PolyFilter(k, l);
+		}
 	}
 
 
@@ -46,7 +66,7 @@ private:
 	FileRead file;
 	const int static FILTER_SIZE = 192;
 	double xBuff[FILTER_SIZE] = {0};
-	int upRate, downRate;
+	const int upRate, downRate;
 
 
 	/**
@@ -84,10 +104,11 @@ private:
 	}
 	/**
 	 * \brief Splits the FIR filter into multiple parts to perform Poly Phase Filtering
-	 * \param x Input x[n] value
+	 * \param k 1st filter coefficient R_kl
+	 * \param l 2nd filter coefficient R_kl
 	 * \return 
 	 */
-	float PolyFilter(float x)
+	float PolyFilter(int k, int l)
 	{
 		//TODO implement polyphase filter
 		return 0;
