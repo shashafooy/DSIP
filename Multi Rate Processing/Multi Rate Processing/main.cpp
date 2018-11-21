@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include "fileRead.h"
 #include "PolyPhase Filter.h"
+#include <chrono>
+#include <stdio.h>
+
+typedef std::chrono::high_resolution_clock Clock;
 
 //int Nb = 8; //Length of b array and xbuff array
 //double b[] = {
@@ -93,9 +97,20 @@ int main(int argc, char *argv[])
 	//outFile(argv[2], h, y, insamples);
 
 	PolyPhaseFilter filter(argv[1], argv[2], 3, 4);
-	if (argc == 4 && !strcmp(argv[3],"poly"))
+	if (argc == 4 && !strcmp(argv[3], "poly"))
+	{
+		auto start = Clock::now();
 		filter.PolyFilter();
+		auto end = Clock::now();
+		 << "Polyphase duration: " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << endl;
+	}
 	else
+	{
+
+		auto start = Clock::now();
 		filter.Filter();
+		auto end = Clock::now();
+		printf("Polyphase duration: %f", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
+	}
 }
 

@@ -73,12 +73,7 @@ public:
 		auto l = 0, futureXValues = upRate - 1;
 		while (!file.eof)
 		{
-			auto newX = file.GetValue();
-			for (auto i = 0; i < upRate; i++)
-			{
-				
-			}
-			
+			auto newX = file.GetValue();			
 
 			for (auto k = 0; k < upRate; k++)
 			{
@@ -143,7 +138,7 @@ private:
 		// Step 3. Accumulate filter output into y
 		for (auto i = 0; i < FILTER_SIZE; i++)
 		{
-			y += FIRValues[i] * xBuff[1][i];
+			y += FIRValues[i] * xBuff[0][i];
 		}
 
 		return static_cast<float>(y);
@@ -164,7 +159,7 @@ private:
 			//y += FIRValues[downRate*(upRate*n + upRate - 1 - k) + l] * polyXBuff(n - (upRate - 1) + k);
 			auto hIndex = upRate * (downRate*n + l) + (upRate - 1) - k;
 			auto xIndex = n + (upRate - 1 - k) + l;
-			y += FIRValues[upRate*(downRate*n + l) + (upRate - 1) - k] * xBuff[n];
+			y += FIRValues[hIndex] * xBuff[l+downRate*k][n];
 
 		}
 		return y;
