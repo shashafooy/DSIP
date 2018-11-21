@@ -65,7 +65,7 @@
 int main(int argc, char *argv[])
 {
 	//Print out the impuse response
-	if (argc != 3) {
+	if (argc < 3) {
 		printf("Wrong number of arguments");
 		exit(EXIT_FAILURE);
 	}
@@ -91,7 +91,11 @@ int main(int argc, char *argv[])
 	//	y[n] = filter(x[n]);
 	//}
 	//outFile(argv[2], h, y, insamples);
+
 	PolyPhaseFilter filter(argv[1], argv[2], 3, 4);
-	filter.Filter();
+	if (argc == 4 && !strcmp(argv[3],"poly"))
+		filter.PolyFilter();
+	else
+		filter.Filter();
 }
 

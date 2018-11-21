@@ -24,17 +24,19 @@ public:
 			exit(EXIT_FAILURE);
 		}
 
-		in.read(reinterpret_cast<char*>(&header), sizeof(dsp_file_header));
+		in.read(reinterpret_cast<char*>(&inFileHeader), sizeof(dsp_file_header));
+		outFileHeader = inFileHeader;
+		outFileHeader.dim0 = 0;
 		dataIndex = in.tellg();
 		//write out initial header, will be updated in the destructor
-		out.write(reinterpret_cast<char*>(&header), sizeof(dsp_file_header));
+		out.write(reinterpret_cast<char*>(&outFileHeader), sizeof(dsp_file_header));
 	}
 
 	~FileRead()
 	{
 		//go to beginning and update header
 		out.seekp(0);
-		out.write(reinterpret_cast<char*>(&header), sizeof(dsp_file_header));
+		out.write(reinterpret_cast<char*>(&outFileHeader), sizeof(dsp_file_header));
 
 		in.close();
 		out.close();
@@ -43,17 +45,23 @@ public:
 	float GetValue()
 	{
 		float retVal;
-		if (eof) return 0;
+		if (eof) return 0.0f;
 		in.read(reinterpret_cast<char*>(&retVal), sizeof(float));
 		eof = in.eof();
+		if (eof) retVal = 0.0f;
 		return retVal;
 	}
 
 	void WriteValue(float val)
 	{
 		out.write(reinterpret_cast<char*>(&val), sizeof(float));
+		outFileHeader.dim0++;
 	}
 
+	void goToStartOfData()
+	{
+		in.seekg(dataIndex);
+	}
 
 	//float* inputFile(const char * inFile, dsp_file_header & h, int & nsamples, int read_offset = 0)
 	//{
@@ -81,7 +89,8 @@ public:
 	//}
 
 
-	dsp_file_header header;
+	dsp_file_header inFileHeader;
+	dsp_file_header outFileHeader;
 	bool eof;
 
 private:
