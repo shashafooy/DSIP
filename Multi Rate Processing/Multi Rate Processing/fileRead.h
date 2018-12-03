@@ -1,5 +1,5 @@
 #pragma once
-#include <stdio.h>
+#include <cstdio>
 #include<string>
 #include "dspFileHeader.h"
 #include <fstream>
@@ -8,7 +8,7 @@ using namespace std;
 class FileRead
 {
 public:
-	FileRead(string inFile, string outFile) : eof(false)
+	FileRead(const string& inFile, const string& outFile) : eof(false)
 	{
 		in.open(inFile, ios::binary);
 		out.open(outFile, ios::binary);
@@ -63,38 +63,13 @@ public:
 		in.seekg(dataIndex);
 	}
 
-	//float* inputFile(const char * inFile, dsp_file_header & h, int & nsamples, int read_offset = 0)
-	//{
-	//	FILE *in;
-	//	float *x;
-	//	fopen_s(&in, inFile, "rb");
-	//	fread(&h, sizeof(dsp_file_header), 1, in);
-	//	//fread_s(&h, sizeof(dsp_file_header), sizeof(dsp_file_header), 1, in);
-	//	if (h.ndim == 1) nsamples = h.nchan*h.dim0;
-	//	else if (h.ndim == 2) nsamples = h.nchan*h.dim0*h.dim1;
-	//	else if (h.ndim == 3) nsamples = h.nchan*h.dim0*h.dim1*h.dim2;
-	//	x = (float*) calloc(sizeof(float), nsamples);
-	//	fread(x, sizeof(float), nsamples, in);
-	//	fclose(in);
-	//	return x;
-	//}
-	//void outFile(const char * outFile, dsp_file_header & h, float * x, int nsamples)
-	//{
-	//	FILE *out;
-	//	fopen_s(&out, outFile, "wb");
-	//	fwrite(&h, sizeof(dsp_file_header), 1, out);
-	//	fwrite(x, sizeof(float), nsamples, out);
-	//	fclose(out);
-	//	free(x);
-	//}
 
-
-	dsp_file_header inFileHeader;
-	dsp_file_header outFileHeader;
+	dsp_file_header inFileHeader {};
+	dsp_file_header outFileHeader {};
 	bool eof;
 
 private:
 	ifstream in;
 	ofstream out;
-	int dataIndex {};
+	fstream::pos_type dataIndex {};
 };

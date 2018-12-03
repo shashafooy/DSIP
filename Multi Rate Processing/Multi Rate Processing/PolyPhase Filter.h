@@ -2,7 +2,7 @@
 #include <string>
 #include <deque>
 #include <vector>
-#include <math.h>
+#include <cmath>
 #include "fileRead.h"
 
 using namespace std;
@@ -37,7 +37,7 @@ public:
 
 			//Upsample
 			yBuffer.push_back(Filter(file.GetValue()));
-			for (auto i = 0; i < upRate - 1; i++)
+			for (auto i = 0u; i < upRate - 1; i++)
 			{
 				yBuffer.push_back(Filter(0));
 			}
@@ -50,13 +50,13 @@ public:
 
 			}
 		}
-		//flush out remaining y values
-		if (yBuffer.size() > 0)
+		//flush out remaining y value
+		if (!yBuffer.empty())
 		{
 			file.WriteValue(yBuffer[0]);
 		}
 		//update header
-		file.outFileHeader.dim1 = floor((double) file.outFileHeader.dim1 * (double) (upRate) / (double) downRate);
+		file.outFileHeader.dim1 = static_cast<int>(file.outFileHeader.dim1 * static_cast<int>(upRate) / downRate);
 	}
 
 	/**
@@ -70,34 +70,34 @@ public:
 		file.goToStartOfData();
 		deque<float> yBuffer(upRate);
 
-		auto l = 0, futureXValues = upRate - 1;
+		auto l = 0u;
 		while (!file.eof)
 		{
-			auto newX = file.GetValue();			
+			const auto newX = file.GetValue();
 
-			for (auto k = 0; k < upRate; k++)
+			for (auto k = 0u; k < upRate; k++)
 			{
 				auto ll = (l + (upRate - 1) - k) % downRate;
 				ShiftXBuffRight(xBuff[ll + downRate * k]);
 				xBuff[ll + downRate * k][0] = newX;
-				yBuffer[k] += PolyFilter(k, ll);
+				yBuffer[k] += static_cast<float>(PolyFilter(k, ll));
 			}
 			//write y values to file if #downrate x[n] have occured
 			if (++l == downRate)
 			{
-				/*for (auto yVal : yBuffer)
+				/*for (auto yVal : (yBuffer))
 				{
 					file.WriteValue(yVal);
 				}*/
-				for (int i = yBuffer.size() - 1; i >= 0; i--)
+				for (auto iterator = yBuffer.rbegin(); iterator != yBuffer.rend(); ++iterator)
 				{
-					file.WriteValue(static_cast<float>(yBuffer[i]));
+					file.WriteValue(static_cast<float>(*iterator));
 				}
-				fill(yBuffer.begin(), yBuffer.end(), 0.0);
+				fill(yBuffer.begin(), yBuffer.end(), 0.0f);
 				l = 0;
 			}
 		}
-		file.outFileHeader.dim1 = floor((double) file.outFileHeader.dim1 * (double) (upRate) / (double) downRate);
+		file.outFileHeader.dim1 = static_cast<int>(floor(static_cast<double>(file.outFileHeader.dim1) * static_cast<double>(upRate) / static_cast<double>(downRate)));
 
 	}
 
@@ -107,18 +107,18 @@ private:
 	FileRead file;
 	const int static FILTER_SIZE = 192;
 	vector<vector<double>> xBuff;
-	const int upRate, downRate;
+	const unsigned int upRate, downRate;
 
 
 	/**
 	 * \brief Shift the given array right by one and put 0 at x[0]
 	 * \param x array to shift
 	 */
-	void ShiftXBuffRight(vector<double> &x)
+	static void ShiftXBuffRight(vector<double> &x)
 	{
-		for (auto i = x.size() - 1; i > 0; i--)
+		for(auto it = x.rbegin(); it!=x.rend()-1; ++it)
 		{
-			x[i] = x[i - 1];
+			*it=*(it+1);
 		}
 		x[0] = 0.0;
 	}
@@ -129,7 +129,7 @@ private:
 	 * \param x input x'[n] value
 	 * \return output y'[n] value
 	 */
-	float Filter(float x)
+	float Filter(const float x)
 	{
 		auto y = 0.0;
 		// Step 1. Shift xbuff and put x into xbuff[0]
@@ -149,17 +149,16 @@ private:
 	 * \param l 2nd filter coefficient R_kl
 	 * \return
 	 */
-	double PolyFilter(int k, int l)
+	double PolyFilter(const int k, const int l)
 	{
 
 		auto y = 0.0;
-		for (auto n = 0; n < FILTER_SIZE / (upRate * downRate); n++)
+		for (auto n = 0u; n < FILTER_SIZE / (upRate * downRate); n++)
 		{
 			//indexes used to split up H into R_kl and X into X_k
 			//y += FIRValues[downRate*(upRate*n + upRate - 1 - k) + l] * polyXBuff(n - (upRate - 1) + k);
-			auto hIndex = upRate * (downRate*n + l) + (upRate - 1) - k;
-			auto xIndex = n + (upRate - 1 - k) + l;
-			y += FIRValues[hIndex] * xBuff[l+downRate*k][n];
+			const auto hIndex = upRate * (downRate*n + l) + (upRate - 1) - k;
+			y += FIRValues[hIndex] * xBuff[l + downRate * k][n];
 
 		}
 		return y;

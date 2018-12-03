@@ -120,6 +120,7 @@
     <ClInclude Include="fileRead.h" />
     <ClInclude Include="pgmIO.h" />
     <ClInclude Include="PolyPhase Filter.h" />
+    <ClInclude Include="Timer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
