@@ -116,8 +116,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="dspFileHeader.h" />
+    <ClInclude Include="Fft842.h" />
     <ClInclude Include="fileRead.h" />
-    <ClInclude Include="PolyPhase Filter.h" />
+    <ClInclude Include="Convolution.h" />
+    <ClInclude Include="Timer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

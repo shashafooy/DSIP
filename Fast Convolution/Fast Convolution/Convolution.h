@@ -1,245 +1,320 @@
 #pragma once
 #include <string>
-#include "pgmIO.h"
-#include "Convolution.h"
-#include <algorithm>
-#include <iostream>
+#include <deque>
+#include <vector>
+#include <cmath>
+#include "fileRead.h"
+#include "Fft842.h"
 
 using namespace std;
-
 
 class Convolution
 {
 public:
-	Convolution() = default;
 
 	/**
-	 * \brief 2D Convolve the given signal with a given h matrix. Writes out the result to a file
-	 * \param inFile Input .pgm file
-	 * \param outFile Output .pgm file
-	 * \param h h matrix set up as a vector (h[x*numCol+y])
-	 * \param hM number of rows in h
-	 * \param hN number of columns in h
+	 * \brief
+	 * \param inFile input file containing x[n] data
+	 * \param outFile desired output file for y[n]
 	 */
-	static void Conv2D(char* inFile, char* outFile, double* h, const int hM, const int hN)
+	Convolution(const string& inFile, const string& outFile)
+		: file(inFile, outFile)
+	{ }
+
+	/**
+	 * \brief The filter system for performing filtering in the time domain
+	 */
+	void Filter()
 	{
-		PgmIO pgmFile(inFile, outFile);
-
-
-		// ReSharper disable CppInconsistentNaming
-		const auto rowX = pgmFile.GetHeader().height,
-		           colX = pgmFile.GetHeader().width,
-		           rowZ = rowX + 2 * (hM - 1),
-		           colZ = colX + 2 * (hN - 1),
-		           rowY = rowX + hM - 1,
-		           colY = colX + hN - 1;
-		// ReSharper restore CppInconsistentNaming
-
-
-		//Allocate and get data
-		const auto y = static_cast<double*>(calloc(sizeof(double), rowY * colY));
-		const auto x = static_cast<double*>(calloc(sizeof(double), rowZ * colZ));
-
-		pgmFile.GetData(x, hM - 1, hN - 1);
-
-
-		Convolve2D(y, rowY, colY, x, rowX, colX, h, hM, hN);
-		auto yHeader = pgmFile.GetHeader();
-		yHeader.width = colY;
-		yHeader.height = rowY;
-
-		//Output to file and cleanup
-		pgmFile.WriteData(y, yHeader, hM - 2, hN - 2);
-
-		free(y);
-		free(x);
+		printf("performing normal filter\n");
+		xBuff.clear();
+		xBuff.resize(FILTER_SIZE, complx{0.0f, 0.0f});
+		file.goToStartOfData();
+		while (!file.eof)
+		{
+			file.WriteValue(Filter(file.GetValue()));
+		}
 	}
 
 	/**
-	 * \brief 2D Convolve the given signal with two matrices S1 and S2. The output is
-	 * edge detection of the given image. Writes out the result to a file
-	 * \param inFile Input .pgm file
-	 * \param outFile Output .pgm file
+	 * \brief The system to convolve the given system by using the fft
 	 */
-	static void Sobel(char* inFile, char* outFile)
+	void FastConvolution()
 	{
-#define X(u,v) x[(u)*colX+(v)]
-#define S1(u,v) s1[(u)*colH+(v)]
-#define S2(u,v) s2[(u)*colH+(v)]
-#define Y(u,v) y[(u)*colY+(v)]
+		const int nFft = pow(2,8);
+		auto eofXIndex = nFft;
 
+		printf("Performing fast convolution\n");
+		xBuff.clear();
+		xBuff.resize(nFft,complx{0.0f, 0.0f});
+		file.goToStartOfData();
 
-		PgmIO pgmFile(inFile, outFile);
+		//TODO make fft of the filter h 
 
-
-		// ReSharper disable CppInconsistentNaming
-		const auto rowX = pgmFile.GetHeader().height,
-		           colX = pgmFile.GetHeader().width,
-		           rowH = 3,
-		           colH = 3,
-		           rowY = rowX +(rowH - 1),
-		           colY = colX +colH - 1,
-		           rowZ = rowX + 2 * (rowH - 1),
-		           colZ = colX + 2 * (colH - 1);
-		// ReSharper restore CppInconsistentNaming
-
-		//Allocate and get data for x
-		const auto y = static_cast<double*>(calloc(sizeof(double), rowY * colY));
-		const auto x = static_cast<double*>(calloc(sizeof(double), rowZ * colZ));
-
-		//zero pad the bounds of x
-		pgmFile.GetData(x, rowH - 1, colH - 1);
-
-		double s1[] = {
-			1, 0, -1,
-			2, 0, -2,
-			1, 0, -1
-		};
-		double s2[] = {
-			-1, -2, -1,
-			0, 0, 0,
-			1, 2, 1
-		};
-
-		//convolve with S1 S2 and combine the result
-		auto tempX = 0.0f, tempY = 0.0f;
-		for (auto k = 0; k < rowY; k++)
+		while(!file.eof)
 		{
-			//Y-row
-			for (auto l = 0; l < colY; l++)
+			//Fill xBuff with nFft items. If eof is reached, fill the rest of xBuff with zeros
+			for(auto i = 0; !file.eof && i<xBuff.size(); i++)
 			{
-				//Y-col
-				for (auto i = 0; i < rowH; i++)
-				{
-					//H-row
-					for (auto j = 0; j < colH; j++)
-					{
-						//H-col
-						//-(i-k) = k+i
-						tempX += S1(i, j) * X(k + i, l + j);
-						tempY += S2(i, j) * X(k + i, l + j);
-					}
-				}
-				const auto res = static_cast<int>(abs(tempX) + abs(tempY));
-				Y(k, l) = res;
-				tempX = 0.0f, tempY = 0.0f;
+				xBuff[i].re = file.GetValue();
+				//TODO check if the value is i or i+1 
+				if(file.eof) eofXIndex = i+1;
 			}
+			//fill end of xBuff with zeros
+			for(auto it=xBuff.begin() + eofXIndex; it!=xBuff.end(); ++it)
+			{
+				it->re=0;
+			}
+
+			//TODO fft of xBuff, may need to convert xBuff into usable format for fft842 
+
+			//TODO multiply X and H
+
+			//TODO make carry over for X
+
+			//TODO inverse fft 
+
+			//TODO write result to file 
 		}
-
-		//write data out to file and cleanup
-		pgmFile.WriteData(y, pgmFile.GetHeader());
-
-		free(y);
-		free(x);
 	}
 
-	static void Correlate(char* inFile, char* outFile, char* hFile)
-	{
-		PgmIO xPgm(inFile, outFile);
-		PgmIO hPgm(hFile);
-
-		auto yHeader = xPgm.GetHeader();
-		const auto rowX = xPgm.GetHeader().height,
-		           colX = xPgm.GetHeader().width,
-		           rowH = hPgm.GetHeader().height,
-		           colH = hPgm.GetHeader().width,
-		           rowZ = rowX + 2 * (rowH - 1),
-		           colZ = colX + 2 * (colH - 1),
-		           rowY = rowX + (rowH - 1),
-		           colY = colX + (colH - 1);
-
-		yHeader.width = colY;
-		yHeader.height = rowY;
-
-		const auto x = static_cast<double*>(calloc(sizeof(double), rowZ * colZ));
-		const auto h = static_cast<double*>(calloc(sizeof(double), rowH * colH));
-		const auto x2 = static_cast<double*>(calloc(sizeof(double), rowZ * colZ));
-		const auto h2 = static_cast<double*>(calloc(sizeof(double), rowH * colH));
-		const auto y1 = static_cast<double*>(calloc(sizeof(double), rowY * colY));
-		const auto y2 = static_cast<double*>(calloc(sizeof(double), rowY * colY));
-
-
-		xPgm.GetData(x, rowH - 1, colH - 1);
-		hPgm.GetData(h);
-
-		for (auto i = 0; i < rowZ * colZ; i++)
-		{
-			x2[i] = pow(x[i], 2);
-		}
-		for (auto i = 0; i < rowH * colH; i++)
-		{
-			h2[i] = 1;
-		}
-		Convolve2D(y2, rowY, colY, x2, rowX, colX, h2, rowH, colH);
-		for (int i = 50; i < 75; i++)
-		{
-			cout << y2[i] << " ";
-		}
-		cout << endl << endl;
-		Convolve2D(y1, rowY, colY, x, rowX, colX, h, rowH, colH);
-		for (int i = 50; i < 75; i++)
-		{
-			cout << y1[i] << " ";
-		}
-		cout << endl << endl;
-		for (auto i = 0; i < rowY * colY; i++)
-		{
-			y1[i] /= y2[i];
-		}
-		for (int i = 50; i < 75; i++)
-		{
-			cout << y1[i] << " ";
-		}
-		cout << endl << endl;
-		ScaleValues(y1, rowY * colY, 255);
-
-		xPgm.WriteData(y1, yHeader, hPgm.GetHeader().height - 1, hPgm.GetHeader().width - 1);
-		free(x);
-		free(h);
-		free(x2);
-		free(h2);
-		free(y1);
-		free(y2);
-	}
 
 private:
-	static void Convolve2D(double* y, const int yM, const int yN, const double* x, const int xM, const int xN,
-	                       const double* h, const int hM, const int hN)
+
+	FileRead file;
+	const int static FILTER_SIZE = 192;
+	vector<complx> xBuff;
+
+
+	/**
+	 * \brief Shift the given array right by one and put 0 at x[0]
+	 * \param x array to shift
+	 */
+	static void ShiftXBuffRight(vector<complx> &x)
 	{
-#define Y(u,v) y[(u)*yN+(v)]
-#define X(u,v) x[(u)*xN+(v)]
-#define H(u,v) h[(u)*hN+(v)]
-
-
-		//Convolve
-		auto result = 0.0f;
-		for (auto k = 0; k < yM; k++)
+		for(auto it = x.rbegin(); it!=x.rend()-1; ++it)
 		{
-			//Y-row
-			for (auto l = 0; l < yN; l++)
-			{
-				//Y-col
-				for (auto i = 0; i < hM; i++)
-				{
-					//H-row
-					for (auto j = 0; j < hN; j++)
-					{
-						//H-col
-						result += H(i, j) * X(k + i, l + j);
-					}
-				}
-				Y(k, l) = result;
-				result = 0.0f;
-			}
+			*it=*(it+1);
 		}
+		x[0] = complx{0.0f, 0.0f};
 	}
 
-	static void ScaleValues(double* y, const int n, const double maxOut)
+	/**
+	 * \brief filters the given x value through a FIR filter.
+	 * \param x input x'[n] value
+	 * \return output y'[n] value
+	 */
+	float Filter(const float x)
 	{
-		const auto maxVal = *max_element(y, y + n);
-		for (auto i = 0; i < n; i++)
+		auto y = 0.0;
+		// Step 1. Shift xbuff and put x into xbuff[0]
+		ShiftXBuffRight(xBuff);
+		xBuff[0].re = x;
+		// Step 3. Accumulate filter output into y
+		for (auto i = 0; i < FILTER_SIZE; i++)
 		{
-			y[i] = y[i] / maxVal * maxOut;
+			y += FIRValues[i].re * xBuff[i].re;
 		}
+
+		return static_cast<float>(y);
 	}
+	
+	// ReSharper disable once CppInconsistentNaming
+	//pass band 0.2, stop band 0.25, 0.001 dB pass band, 80 dB stop band
+	const complx FIRValues[FILTER_SIZE] =
+	{
+		complx{-0.000024934725597404746959533800021446837, 0},
+		complx{-0.000065636259920756053832038845463614507, 0},
+		complx{ 0.000001041150238862995698781166442614676, 0},
+		complx{ 0.000011660091247619422150398268978044314, 0},
+		complx{ 0.000052352687017094597511472631179429982, 0},
+		complx{ 0.00006499893961617480057056661646441853 , 0},
+		complx{ 0.000047861859425364907338028286343245554, 0},
+		complx{-0.00000458533125515791779684693363350334 , 0},
+		complx{-0.000069917636882030161278069047003924652, 0},
+		complx{-0.000114361356738234653911134852677378149, 0},
+		complx{-0.00010577366673444671060777544369102543 , 0},
+		complx{-0.000034694375084613491623010406161853325, 0},
+		complx{ 0.000074690970214807560385861240348503998, 0},
+		complx{ 0.00016996181251098435084113946746953161 , 0},
+		complx{ 0.000193775566366671884695541128174056666, 0},
+		complx{ 0.000115641999385588783435738213789534257, 0},
+		complx{-0.000044525704547401544544909385292541515, 0},
+		complx{-0.000216252044823916228250687554535147683, 0},
+		complx{-0.000307075678293204775912150772398945264, 0},
+		complx{-0.00024964541329026084621675596331158431 , 0},
+		complx{-0.000044522380354090594915990319879739445, 0},
+		complx{ 0.000226307040306566163191670515431042077, 0},
+		complx{ 0.000428474397663484800856392720191934131, 0},
+		complx{ 0.000438979869858333027459601494157936941, 0},
+		complx{ 0.00021574045374895148914802522899236692 , 0},
+		complx{-0.000164301369933395058353653439553454518, 0},
+		complx{-0.000525350865445688695355708208722944619, 0},
+		complx{-0.000670445129333984801527079877558890075, 0},
+		complx{-0.000484331495295036384106379667713326853, 0},
+		complx{-0.000009647993452584083598488895461287029, 0},
+		complx{ 0.000549417212097273732762658937645028345, 0},
+		complx{ 0.000909895047412133005024226228840689146, 0},
+		complx{ 0.000848676037135976616548882489610150515, 0},
+		complx{ 0.000331145655315976425274449024271916642, 0},
+		complx{-0.000440752022116357069624753561853935935, 0},
+		complx{-0.001099392938591296732184221518480171653, 0},
+		complx{-0.001281336965236502378057137363498441118, 0},
+		complx{-0.000820291767160266746712615759662412529, 0},
+		complx{ 0.00013610006897614527207954204790496533 , 0},
+		complx{ 0.001158680984476364401666859116346586234, 0},
+		complx{ 0.001722495538229814552450003262151767558, 0},
+		complx{ 0.001469198887670515553047212442550062406, 0},
+		complx{ 0.000418141270010042936326050133644116613, 0},
+		complx{-0.000992238004107560533223475474073893565, 0},
+		complx{-0.002077183186843121510956056141594672226, 0},
+		complx{-0.00223033573102634748511197138043371524 , 0},
+		complx{-0.00125024872686162950678745442445460867 , 0},
+		complx{ 0.000502119040231998811640856672511290526, 0},
+		complx{ 0.002218938714006200678408031734534233692, 0},
+		complx{ 0.003008352809175654160589452601470838999, 0},
+		complx{ 0.002346477029417598156313395918459718814, 0},
+		complx{ 0.000394592016990935275967677942077216358, 0},
+		complx{-0.001999850288268604798364025398882404261, 0},
+		complx{-0.003657611339089738775043336715953046223, 0},
+		complx{-0.003636425515971153377137170537025667727, 0},
+		complx{-0.001745396873668303037649418563148628891, 0},
+		complx{ 0.001266925760370259720216656873503779934, 0},
+		complx{ 0.003986570304187937036077826746804930735, 0},
+		complx{ 0.004983089934751115494815376649739846471, 0},
+		complx{ 0.003542558277226478223587147198259117431, 0},
+		complx{ 0.000117743521864981689865892189317264638, 0},
+		complx{-0.003768296876769073548013588847993560194, 0},
+		complx{-0.006178693850696316200443725108470971463, 0},
+		complx{-0.005706671689582942796903353155357763171, 0},
+		complx{-0.002256737924765969509344198939970738138, 0},
+		complx{ 0.00275431575298191056583307911864721973 , 0},
+		complx{ 0.006945732038727860796489821382238005754, 0},
+		complx{ 0.008075999802919288719782464625041029649, 0},
+		complx{ 0.005202617612171959483868821649821256869, 0},
+		complx{-0.000684345737118236506490998038998441189, 0},
+		complx{-0.006937461504364140531253557497848305502, 0},
+		complx{-0.010401329782366196957665849254226486664, 0},
+		complx{-0.008956111966148740111126613783198990859, 0},
+		complx{-0.002722062332771117872110000490692982567, 0},
+		complx{ 0.00572285217763909056370996708551501797 , 0},
+		complx{ 0.012340139889645773685344920522766187787, 0},
+		complx{ 0.013489364465165333550888959734948002733, 0},
+		complx{ 0.00782428341512969756366135953840057482 , 0},
+		complx{-0.002715938011373531663084079923464742023, 0},
+		complx{-0.013428967962625965038014896890672389418, 0},
+		complx{-0.018823026349477467444870626422925852239, 0},
+		complx{-0.015262232182947204836565013863491913071, 0},
+		complx{-0.003077326146603935174556054832351037476, 0},
+		complx{ 0.012959630076951085889125359074114385294, 0},
+		complx{ 0.025258306327792200834947422549703333061, 0},
+		complx{ 0.0266609576335534101398927475656819297  , 0},
+		complx{ 0.014032211507927249902194510866593191167, 0},
+		complx{-0.009416735171555725217307220020757085877, 0},
+		complx{-0.034295575437389591577641567710088565946, 0},
+		complx{-0.047953435557098647579188366307789692655, 0},
+		complx{-0.03923348459064074367219632222258951515 , 0},
+		complx{-0.003269816833183489257486087353754555807, 0},
+		complx{ 0.05565084805617202118321884540819155518 , 0},
+		complx{ 0.124494971998675318936022904381388798356, 0},
+		complx{ 0.185251215220669562810940078634303063154, 0},
+		complx{ 0.220809878549311722206738295426475815475, 0},
+		complx{ 0.220809878549311722206738295426475815475, 0},
+		complx{ 0.185251215220669562810940078634303063154, 0},
+		complx{ 0.124494971998675318936022904381388798356, 0},
+		complx{ 0.05565084805617202118321884540819155518 , 0},
+		complx{-0.003269816833183489257486087353754555807, 0},
+		complx{-0.03923348459064074367219632222258951515 , 0},
+		complx{-0.047953435557098647579188366307789692655, 0},
+		complx{-0.034295575437389591577641567710088565946, 0},
+		complx{-0.009416735171555725217307220020757085877, 0},
+		complx{ 0.014032211507927249902194510866593191167, 0},
+		complx{ 0.0266609576335534101398927475656819297  , 0},
+		complx{ 0.025258306327792200834947422549703333061, 0},
+		complx{ 0.012959630076951085889125359074114385294, 0},
+		complx{-0.003077326146603935174556054832351037476, 0},
+		complx{-0.015262232182947204836565013863491913071, 0},
+		complx{-0.018823026349477467444870626422925852239, 0},
+		complx{-0.013428967962625965038014896890672389418, 0},
+		complx{-0.002715938011373531663084079923464742023, 0},
+		complx{ 0.00782428341512969756366135953840057482 , 0},
+		complx{ 0.013489364465165333550888959734948002733, 0},
+		complx{ 0.012340139889645773685344920522766187787, 0},
+		complx{ 0.00572285217763909056370996708551501797 , 0},
+		complx{-0.002722062332771117872110000490692982567, 0},
+		complx{-0.008956111966148740111126613783198990859, 0},
+		complx{-0.010401329782366196957665849254226486664, 0},
+		complx{-0.006937461504364140531253557497848305502, 0},
+		complx{-0.000684345737118236506490998038998441189, 0},
+		complx{ 0.005202617612171959483868821649821256869, 0},
+		complx{ 0.008075999802919288719782464625041029649, 0},
+		complx{ 0.006945732038727860796489821382238005754, 0},
+		complx{ 0.00275431575298191056583307911864721973 , 0},
+		complx{-0.002256737924765969509344198939970738138, 0},
+		complx{-0.005706671689582942796903353155357763171, 0},
+		complx{-0.006178693850696316200443725108470971463, 0},
+		complx{-0.003768296876769073548013588847993560194, 0},
+		complx{ 0.000117743521864981689865892189317264638, 0},
+		complx{ 0.003542558277226478223587147198259117431, 0},
+		complx{ 0.004983089934751115494815376649739846471, 0},
+		complx{ 0.003986570304187937036077826746804930735, 0},
+		complx{ 0.001266925760370259720216656873503779934, 0},
+		complx{-0.001745396873668303037649418563148628891, 0},
+		complx{-0.003636425515971153377137170537025667727, 0},
+		complx{-0.003657611339089738775043336715953046223, 0},
+		complx{-0.001999850288268604798364025398882404261, 0},
+		complx{ 0.000394592016990935275967677942077216358, 0},
+		complx{ 0.002346477029417598156313395918459718814, 0},
+		complx{ 0.003008352809175654160589452601470838999, 0},
+		complx{ 0.002218938714006200678408031734534233692, 0},
+		complx{ 0.000502119040231998811640856672511290526, 0},
+		complx{-0.00125024872686162950678745442445460867 , 0},
+		complx{-0.00223033573102634748511197138043371524 , 0},
+		complx{-0.002077183186843121510956056141594672226, 0},
+		complx{-0.000992238004107560533223475474073893565, 0},
+		complx{ 0.000418141270010042936326050133644116613, 0},
+		complx{ 0.001469198887670515553047212442550062406, 0},
+		complx{ 0.001722495538229814552450003262151767558, 0},
+		complx{ 0.001158680984476364401666859116346586234, 0},
+		complx{ 0.00013610006897614527207954204790496533 , 0},
+		complx{-0.000820291767160266746712615759662412529, 0},
+		complx{-0.001281336965236502378057137363498441118, 0},
+		complx{-0.001099392938591296732184221518480171653, 0},
+		complx{-0.000440752022116357069624753561853935935, 0},
+		complx{ 0.000331145655315976425274449024271916642, 0},
+		complx{ 0.000848676037135976616548882489610150515, 0},
+		complx{ 0.000909895047412133005024226228840689146, 0},
+		complx{ 0.000549417212097273732762658937645028345, 0},
+		complx{-0.000009647993452584083598488895461287029, 0},
+		complx{-0.000484331495295036384106379667713326853, 0},
+		complx{-0.000670445129333984801527079877558890075, 0},
+		complx{-0.000525350865445688695355708208722944619, 0},
+		complx{-0.000164301369933395058353653439553454518, 0},
+		complx{ 0.00021574045374895148914802522899236692 , 0},
+		complx{ 0.000438979869858333027459601494157936941, 0},
+		complx{ 0.000428474397663484800856392720191934131, 0},
+		complx{ 0.000226307040306566163191670515431042077, 0},
+		complx{-0.000044522380354090594915990319879739445, 0},
+		complx{-0.00024964541329026084621675596331158431 , 0},
+		complx{-0.000307075678293204775912150772398945264, 0},
+		complx{-0.000216252044823916228250687554535147683, 0},
+		complx{-0.000044525704547401544544909385292541515, 0},
+		complx{ 0.000115641999385588783435738213789534257, 0},
+		complx{ 0.000193775566366671884695541128174056666, 0},
+		complx{ 0.00016996181251098435084113946746953161 , 0},
+		complx{ 0.000074690970214807560385861240348503998, 0},
+		complx{-0.000034694375084613491623010406161853325, 0},
+		complx{-0.00010577366673444671060777544369102543 , 0},
+		complx{-0.000114361356738234653911134852677378149, 0},
+		complx{-0.000069917636882030161278069047003924652, 0},
+		complx{-0.00000458533125515791779684693363350334 , 0},
+		complx{ 0.000047861859425364907338028286343245554, 0},
+		complx{ 0.00006499893961617480057056661646441853 , 0},
+		complx{ 0.000052352687017094597511472631179429982, 0},
+		complx{ 0.000011660091247619422150398268978044314, 0},
+		complx{ 0.000001041150238862995698781166442614676, 0},
+		complx{-0.000065636259920756053832038845463614507, 0},
+		complx{-0.000024934725597404746959533800021446837, 0},
+	};
+
 };

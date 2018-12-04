@@ -21,7 +21,13 @@
     <ClInclude Include="fileRead.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PolyPhase Filter.h">
+    <ClInclude Include="Convolution.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Timer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Fft842.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
