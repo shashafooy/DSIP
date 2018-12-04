@@ -54,7 +54,7 @@ public:
 		while(!file.eof)
 		{
 			//Fill xBuff with nFft items. If eof is reached, fill the rest of xBuff with zeros
-			for(auto i = 0; !file.eof && i<xBuff.size(); i++)
+			for(auto i = 0u; !file.eof && i<xBuff.size(); i++)
 			{
 				xBuff[i].re = file.GetValue();
 				//TODO check if the value is i or i+1 
