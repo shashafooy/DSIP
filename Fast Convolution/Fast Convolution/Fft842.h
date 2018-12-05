@@ -78,7 +78,7 @@ static char SccsId[] = "@(#)LUfft842.c	1.3\t01/31/02\tUSU";
 typedef struct
 {
 	float re;
-	float im;
+	float im;	
 }complx;
 
 static complx *stable;
@@ -344,6 +344,16 @@ fft842(in, n, x)
 int in, n;
 complx x[];
 #else
+/**
+ * \brief This program replaces the complex array x by its finite
+discrete, complex fourier transform.  It performs as many base
+8 iterations as possible and then finishes with a base 4 iteration
+or a base 2 iteration if needed.
+ * \param in If in=0, the forward fft is computed in place.  If in=1, the inverse
+*fft is computed.
+ * \param n This is the number of points in the fft.  It must be a power of two.
+ * \param x This is a complex array of points to be transformed.
+ */
 void fft842(int in, int n, complx *x)
 #endif
 {
