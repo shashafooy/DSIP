@@ -24,7 +24,7 @@ int main(const int argc, char *argv[])
 	printf("Filter duration: %0.3f seconds\n", Timer::GetDuration());
 #endif
 
-	//system("pause");
+	system("pause");
 	return 0;
 }
 

@@ -45,9 +45,9 @@ public:
 	float GetValue()
 	{
 		float retVal;
-		if (eof) return 0.0f;
 		in.read(reinterpret_cast<char*>(&retVal), sizeof(float));
 		eof = in.eof();
+		//last value read in is garbage for some reason
 		if (eof) retVal = 0.0f;
 		return retVal;
 	}
@@ -58,7 +58,7 @@ public:
 		outFileHeader.dim0++;
 	}
 
-	void goToStartOfData()
+	void GoToStartOfData()
 	{
 		in.seekg(dataIndex);
 	}
